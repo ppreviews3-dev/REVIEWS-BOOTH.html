@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Interactive Floor Plan — Embed-ready</title>
+  <style>
+    :root{--bg:#f6f7fb;--muted:#666;--green:#2ecc71;--red:#e74c3c;--card:#fff;--accent:#2b6cb0}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#111}
+    .wrap{max-width:1100px;margin:14px auto;padding:14px}
+    h1{font-size:18px;margin:0 0 10px}
+    .note{font-size:13px;color:var(--muted);margin-bottom:12px}
+
+    /* simplified layout matching uploaded map (approx) */
+    .plan{width:100%;background:linear-gradient(180deg,#fff,#fbfdff);padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(12,15,25,0.04)}
+    .stage{height:140px;border-radius:6px;background:#f7e6ff;margin:8px auto 18px;display:flex;align-items:center;justify-content:center;color:#5b2b8a;font-weight:700}
+
+    .top-row{display:flex;gap:10px;justify-content:center;margin-bottom:18px}
+    .middle{display:flex;gap:24px;align-items:flex-start;justify-content:center}
+    .center-cluster{display:grid;grid-template-columns:120px 40px 120px;gap:18px;align-items:center}
+    .cluster{display:flex;flex-direction:column;gap:10px}
+    .right-column{display:flex;flex-direction:column;gap:10px}
+    .bottom-row{display:flex;gap:10px;justify-content:center;margin-top:18px}
+
+    .booth{position:relative;min-width:80px;border-radius:8px;padding:8px 10px;text-align:center;font-weight:600;cursor:default;border:2px solid rgba(0,0,0,0.06);box-shadow:0 6px 14px rgba(12,15,25,0.03)}
+    .booth.available{background:var(--green);color:#063;}
+    .booth.booked{background:var(--red);color:#fff}
+    .booth .id{font-size:14px}
+    .booth .price{font-size:12px;margin-top:6px;opacity:0.95}
+
+    /* tooltip on hover (interaction type B) */
+    .tooltip{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 10px);white-space:nowrap;background:rgba(0,0,0,0.82);color:white;padding:8px 10px;border-radius:6px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .12s ease,transform .12s ease}
+    .booth:hover .tooltip{opacity:1;transform:translateX(-50%) translateY(-4px)}
+    .tooltip .line{font-weight:600}
+    .tooltip .muted{font-weight:400;font-size:12px;opacity:0.9}
+
+    /* small controls */
+    .controls{display:flex;gap:8px;margin-top:12px;align-items:center}
+    .input,button,select{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px}
+    button.primary{background:var(--accent);color:white;border:none}
+    .small{font-size:13px;color:var(--muted)}
+
+    @media (max-width:700px){.middle{flex-direction:column;align-items:center}.top-row,.bottom-row{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Interactive Floor Plan (embed-ready)</h1>
+    <div class="note">Hover a booth to see details. Green = available (price shown). Red = booked (vendor shown). To update statuses for everyone, host a JSON file and use the <strong>Load from URL</strong> control below.</div>
+
+    <div class="plan" id="plan">
+      <!-- Top narrow row -->
+      <div class="top-row" id="topRow">
+        <!-- #10, #20, #7, #8, #9, #19, #18 -->
+      </div>
+
+      <!-- center: clusters and purple rectangle (stage/poster) -->
+      <div class="middle">
+        <div class="left-gap" style="width:40px"></div>
+        <div class="center-cluster">
+          <div class="cluster" id="leftCluster">
+            <!-- #4, #3 -->
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:center;">
+            <div class="stage">Poster</div>
+          </div>
+
+          <div class="cluster" id="rightCluster">
+            <!-- #6, #5 -->
+          </div>
+        </div>
+
+        <div class="right-column" id="rightCol">
+          <!-- #17, #16, #15 -->
+        </div>
+      </div>
+
+      <!-- bottom front row (UMKM-like in image) and bottom exhibition -->
+      <div class="bottom-row" id="bottomRow">
+        <!-- #11,#12,#1,#2,#13,#14 -->
+      </div>
+
+    </div>
+
+    <div class="controls">
+      <input class="input" id="dataUrl" placeholder="Paste JSON file URL (public, CORS-enabled)" />
+      <button class="primary" id="loadUrl">Load from URL</button>
+      <button id="exportBtn">Export current JSON</button>
+      <select id="presetSelect"><option value="">— Presets —</option><option value="default">Use default sample</option></select>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:14px;align-items:flex-start">
+      <div style="flex:1">
+        <div class="small">Sample JSON structure (array of booths):</div>
+        <pre class="small" style="background:#fff;padding:8px;border-radius:6px;border:1px solid #eee;">[
+  { "id":"#10", "status":"available", "price":20000000, "vendor":"" },
+  { "id":"#7",  "status":"available", "price":25000000, "vendor":"" },
+  { "id":"#1",  "status":"booked",    "price":25000000, "vendor":"Vendor ABC" }
+]</pre>
+      </div>
+
+      <div style="width:320px">
+        <div class="small">Notes:</div>
+        <ul class="small">
+          <li>Host your JSON file on a public URL with CORS enabled (GitHub Pages, Netlify, AWS S3, etc.).</li>
+          <li>When you press <strong>Load from URL</strong> the plan will update for everyone who visits the embedded page.</li>
+          <li>Use the <strong>Export</strong> button to download the current state as a JSON file.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Booth layout and IDs (20 booths) */
+    const boothOrder = {
+      top: ['#10','#20','#7','#8','#9','#19','#18'],
+      leftCluster: ['#4','#3'],
+      rightCluster: ['#6','#5'],
+      rightCol: ['#17','#16','#15'],
+      bottom: ['#11','#12','#1','#2','#13','#14']
+    };
+
+    // prices: special 25M for these booths, others 20M
+    const price25 = new Set(['#7','#8','#9','#3','#4','#5','#6','#1','#2']);
+    const DEFAULT_PRICE_25 = 25000000;
+    const DEFAULT_PRICE_20 = 20000000;
+
+    // build DOM booth elements
+    function createBoothEl(id){
+      const div = document.createElement('div'); div.className='booth available'; div.dataset.id=id;
+      const idEl = document.createElement('div'); idEl.className='id'; idEl.textContent = id;
+      const priceEl = document.createElement('div'); priceEl.className='price';
+      const price = price25.has(id)? DEFAULT_PRICE_25: DEFAULT_PRICE_20;
+      priceEl.textContent = 'Rp ' + numberWithSeparator(price);
+
+      // tooltip (hover only)
+      const tip = document.createElement('div'); tip.className='tooltip';
+      tip.innerHTML = '<div class="line">Available</div><div class="muted">Price: Rp ' + numberWithSeparator(price) + '</div>';
+
+      div.appendChild(idEl); div.appendChild(priceEl); div.appendChild(tip);
+      return div;
+    }
+
+    function numberWithSeparator(x){ return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+
+    function populateLayout(){
+      const topRow = document.getElementById('topRow'); topRow.innerHTML=''; boothOrder.top.forEach(id=> topRow.appendChild(createBoothEl(id)));
+      const leftCluster = document.getElementById('leftCluster'); leftCluster.innerHTML=''; boothOrder.leftCluster.forEach(id=> leftCluster.appendChild(createBoothEl(id)));
+      const rightCluster = document.getElementById('rightCluster'); rightCluster.innerHTML=''; boothOrder.rightCluster.forEach(id=> rightCluster.appendChild(createBoothEl(id)));
+      const rightCol = document.getElementById('rightCol'); rightCol.innerHTML=''; boothOrder.rightCol.forEach(id=> rightCol.appendChild(createBoothEl(id)));
+      const bottomRow = document.getElementById('bottomRow'); bottomRow.innerHTML=''; boothOrder.bottom.forEach(id=> bottomRow.appendChild(createBoothEl(id)));
+    }
+
+    // state management: either fetched from URL or use defaults. Expose export.
+    function defaultState(){
+      const ids = [].concat(boothOrder.top, boothOrder.leftCluster, boothOrder.rightCluster, boothOrder.rightCol, boothOrder.bottom);
+      return ids.map(id=>({ id, status:'available', price: price25.has(id)? DEFAULT_PRICE_25: DEFAULT_PRICE_20, vendor:''}));
+    }
+
+    function applyState(state){
+      state.forEach(s=>{
+        const el = document.querySelector('.booth[data-id="'+s.id+'"]');
+        if(!el) return;
+        // update classes
+        el.classList.toggle('booked', s.status==='booked');
+        el.classList.toggle('available', s.status!=='booked');
+        // update tooltip
+        const tip = el.querySelector('.tooltip');
+        if(s.status==='booked'){
+          tip.innerHTML = '<div class="line">Booked</div><div class="muted">Vendor: ' + escapeHtml(s.vendor || '') + '</div>';
+        } else {
+          tip.innerHTML = '<div class="line">Available</div><div class="muted">Price: Rp ' + numberWithSeparator(s.price || (price25.has(s.id)? DEFAULT_PRICE_25: DEFAULT_PRICE_20)) + '</div>';
+        }
+        // update price label
+        const priceEl = el.querySelector('.price'); priceEl.textContent = 'Rp ' + numberWithSeparator(s.price || (price25.has(s.id)? DEFAULT_PRICE_25: DEFAULT_PRICE_20));
+      });
+    }
+
+    // escape helper
+    function escapeHtml(str){ return (str||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]}); }
+
+    // fetch JSON from URL
+    async function loadFromUrl(url){
+      try{
+        const res = await fetch(url, {cache:'no-store'});
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const json = await res.json();
+        // validate and apply
+        applyState(json);
+        latestState = json;
+        alert('Loaded '+json.length+' booths from URL');
+      }catch(e){ alert('Failed to load JSON: '+e.message); }
+    }
+
+    // export
+    function exportCurrent(){
+      // build state from DOM
+      const els = Array.from(document.querySelectorAll('.booth'));
+      const arr = els.map(el=>({ id: el.dataset.id, status: el.classList.contains('booked')? 'booked':'available', price: parseInt(el.querySelector('.price').textContent.replace(/[^0-9]/g,''),10), vendor: el.classList.contains('booked')? (el.dataset.vendor||'') : '' }));
+      const blob = new Blob([JSON.stringify(arr,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='floorplan-state.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // allow quick preset
+    document.getElementById('presetSelect').addEventListener('change', (e)=>{
+      if(e.target.value==='default') { const def = defaultState(); applyState(def); latestState = def; }
+    });
+
+    document.getElementById('loadUrl').addEventListener('click', ()=>{
+      const url = document.getElementById('dataUrl').value.trim(); if(!url){ alert('Paste a public JSON URL first.'); return; } loadFromUrl(url);
+    });
+    document.getElementById('exportBtn').addEventListener('click', exportCurrent);
+
+    // initial render
+    populateLayout();
+    let latestState = defaultState();
+    applyState(latestState);
+
+    // Make booths optionally updated locally when a site admin clicks (not required): double-click prompt to edit vendor/status
+    // Note: user requested hover-only interaction; this is an optional admin edit (double-click) to set booked/available and vendor name, which then allows exporting.
+    document.addEventListener('dblclick', (ev)=>{
+      const b = ev.target.closest('.booth'); if(!b) return;
+      const id = b.dataset.id; const state = latestState.slice(); const item = state.find(x=>x.id===id);
+      if(!item) return;
+      const newStatus = prompt('Enter status for '+id+' (available/booked)', item.status) || item.status;
+      if(newStatus==='booked'){ const vendor = prompt('Vendor name (for '+id+')', item.vendor||'') || item.vendor; item.vendor = vendor; item.status='booked'; }
+      else { item.status='available'; item.vendor=''; }
+      latestState = state; applyState(latestState);
+      alert('Updated locally. Press Export to save the JSON file.');
+    });
+
+    // Expose functions to console for debugging
+    window._fp = { loadFromUrl, exportCurrent, defaultState };
+  </script>
+</body>
+</html>
